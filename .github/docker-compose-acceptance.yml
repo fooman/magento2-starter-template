@@ -1,0 +1,50 @@
+version: "3.5"
+services:
+    php-fpm:
+        container_name: php-fpm
+        image: magento/magento-cloud-docker-php:7.3-fpm-1.0
+        environment:
+            - ENABLE_SENDMAIL=true
+            - PHP_MEMORY_LIMIT="-1"
+        volumes:
+            - __GITHUB_WORKSPACE__:/app
+
+    mysql:
+        image: quay.io/warden/mysql:5.7
+        environment:
+            - MYSQL_ROOT_PASSWORD=123123q
+            - MYSQL_DATABASE=magento_acceptance_tests
+        ports:
+            - 3306
+        command:
+            - mysqld
+            - --max_allowed_packet=1024M
+            - --explicit_defaults_for_timestamp=on
+        healthcheck:
+            test: "mysqladmin ping"
+            interval: "10s"
+            timeout: "5s"
+            start_period: "5s"
+            retries: 5
+
+    selenium:
+        image: selenium/standalone-chrome
+        healthcheck:
+            test: "/opt/bin/check-grid.sh"
+            interval: "10s"
+            timeout: "5s"
+            start_period: "5s"
+            retries: 5
+
+    nginx:
+        container_name: nginx
+        hostname: magento2.test
+        image: quay.io/warden/nginx:1.17
+        depends_on:
+            - php-fpm
+            - mysql
+        environment:
+            - NGINX_PUBLIC=""
+            - NGINX_TEMPLATE=magento2.conf
+        volumes:
+            - __GITHUB_WORKSPACE__:/var/www/html

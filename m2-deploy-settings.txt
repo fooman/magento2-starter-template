@@ -1,0 +1,12 @@
+# Space separated list of languages for static-content:deploy
+M2_DEPLOYER_LOCALES="en_US"
+
+# Settings for deploying to staging server
+M2_DEPLOYER_STAGE_HOSTNAME="SSH-host"
+M2_DEPLOYER_STAGE_USER="SSH-user-name"
+M2_DEPLOYER_STAGE_PATH="/var/www/html/staging"
+
+# Settings for deploying to live/production server
+M2_DEPLOYER_PROD_HOSTNAME="SSH-host"
+M2_DEPLOYER_PROD_USER="SSH-user-name"
+M2_DEPLOYER_PROD_PATH="/var/www/html/production"

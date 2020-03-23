@@ -1,0 +1,111 @@
+name: Fooman M2 CI-CD acceptance
+
+on: push
+
+jobs:
+    lint:
+                -   name: PHP syntax checker 7.3
+                    uses: StephaneBour/actions-php-lint@7.3
+                    with:
+                        dir: './app'
+    acceptance:
+        name: Acceptance Testing
+        runs-on: ubuntu-latest
+        container:
+            image: magento/magento-cloud-docker-php:7.3-cli-1.0
+            env:
+                ENABLE_SENDMAIL: true
+            options: >-
+                --add-host="magento2.test:172.18.0.7"
+                -v /home/runner/work/_temp/_github_workflow:/app
+        services:
+            php-fpm:
+                image: magento/magento-cloud-docker-php:7.3-fpm-1.0
+                env:
+                    ENABLE_SENDMAIL: true
+                volumes:
+                    - $GITHUB_WORKSPACE:/app
+            mysql:
+                image: quay.io/warden/mysql:5.7
+                env:
+                    MYSQL_ROOT_PASSWORD: 123123q
+                    MYSQL_DATABASE: magento_acceptance_tests
+                ports:
+                    - 3306
+                options: >-
+                    --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+            rabbitmq:
+                image: quay.io/warden/rabbitmq:3.7
+                ports:
+                    - 5672
+                options: --health-cmd "rabbitmqctl node_health_check" --health-interval 10s --health-timeout 5s --health-retries 5
+            selenium:
+                image: selenium/standalone-chrome
+                options: >-
+                    --health-cmd "/opt/bin/check-grid.sh"
+                    --add-host="magento2.test:172.18.0.7"
+            magento2.test:
+                options: >-
+                    --name nginx
+                    --user root
+                    --network-alias magento2.test
+                    -v /home/runner/work/_temp/_github_workflow:/var/www/html
+                image: quay.io/warden/nginx:1.17
+                env:
+                    NGINX_PUBLIC: ""
+                    NGINX_TEMPLATE: magento2.conf
+                ports:
+                    - 80:80
+
+        steps:
+            -   uses: actions/checkout@v2
+                name: Checkout files
+
+            -   name: Get composer cache directory
+                id: composer-cache
+                run: "echo \"::set-output name=dir::$(composer config cache-dir)\""
+
+            -   name: Cache dependencies
+                uses: actions/cache@v1
+                with:
+                    path: ${{ steps.composer-cache.outputs.dir }}
+                    key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+                    restore-keys: ${{ runner.os }}-composer-
+
+            -   name: Setup Composer Access
+                run: composer config -a -g http-basic.repo.magento.com ${{ secrets.REPO_MAGENTO_USERNAME }} ${{ secrets.REPO_MAGENTO_PASSWORD }}
+
+            -   name: Composer install
+                run: composer install --no-interaction --no-progress --no-suggest
+
+            -   name: Install Magento
+                run: >-
+                    bin/magento setup:install
+                    --backend-frontname=admin
+                    --db-host=mysql
+                    --db-name=magento_acceptance_tests
+                    --db-user=root
+                    --db-password=123123q
+                    --admin-user=admin@example.com
+                    --admin-password=password1
+                    --admin-email=admin@example.com
+                    --admin-firstname=firstname
+                    --admin-lastname=lastname
+                    --base-url=http://magento2.test/
+
+            -   name: Prepare Acceptance Tests
+                run: >-
+                    bin/magento config:set --lock-env cms/wysiwyg/enabled disabled
+                    && bin/magento config:set --lock-env admin/security/admin_account_sharing 1
+                    && bin/magento config:set --lock-env admin/security/use_form_key 0
+                    && vendor/bin/mftf build:project
+                    && bin/magento deploy:mode:set developer
+                    && sed -i 's/devdocs.magento.com/magento2.test/g' $GITHUB_WORKSPACE/dev/tests/acceptance/.env
+                    && echo "SELENIUM_HOST=selenium" >> $GITHUB_WORKSPACE/dev/tests/acceptance/.env
+                    && echo "BROWSER=chrome" >> $GITHUB_WORKSPACE/dev/tests/acceptance/.env
+                    && cat $GITHUB_WORKSPACE/dev/tests/acceptance/.env
+                    && cat /etc/hosts
+                    && curl -v http://magento2.test
+
+            -   name: Run Acceptance Tests
+                run: vendor/bin/mftf run:test AdminLoginTest

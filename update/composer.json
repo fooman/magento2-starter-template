@@ -1,0 +1,32 @@
+{
+    "name": "magento/updater",
+    "description": "Magento Updater",
+    "type": "project",
+    "version": "10.1.1",
+    "license": [
+        "OSL-3.0",
+        "AFL-3.0"
+    ],
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://repo.magento.com/"
+        }
+    ],
+    "require": {
+        "php": "~7.1.3||~7.2.0||~7.3.0",
+        "composer/composer": "^1.6",
+        "magento/composer": "~1.5.0",
+        "symfony/console": "~4.1.0||~4.2.0||~4.3.0",
+        "monolog/monolog": "^1.17",
+        "psr/log": "~1.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "~7.0.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Magento\\": "app/code/Magento/"
+        }
+    }
+}
