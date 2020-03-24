@@ -38,6 +38,16 @@ Tagged commits will trigger a longer execution of integration tests, if successf
 
 It is anticipated that the first deploys will not succeed. After running the first deploy please provide a valid `app/etc/env.php` on the server directly. Alternatively run `bin/magento setup:install` to create one.
 
+## Includes
+Utilises Magento 2 Deployer Plus
+
+Includes common tools
+Composer.phar
+ExtDN_Installer.phar
+Magerun2.phar
+
+Has a pre-set up template under app/design/frontend/Magento/luma-extended to build on top of the Luma theme.
+
 ## Links
 https://help.github.com/en/github/authenticating-to-github/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent
 https://desktop.github.com/
