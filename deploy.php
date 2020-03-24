@@ -3,7 +3,7 @@ namespace Deployer;
 
 require 'vendor/jalogut/magento2-deployer-plus/recipe/magento_2_2_5.php';
 
-require 'vendor/autoload.php';
+require __DIR__.'/vendor/autoload.php';
 $env = new \Dotenv\Loader(__DIR__. '/m2-deploy-settings.txt');
 $env->load();
 

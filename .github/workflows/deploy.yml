@@ -98,7 +98,7 @@ jobs:
                 run: dep build
 
             -   name: Deploy Artifact to Staging
-                run: dep deploy-artifact stage
+                run: dep deploy-artifact stage -vv
 
     deploy-to-prod:
         name: Deploy to Production
@@ -142,4 +142,4 @@ jobs:
                 run: dep build
 
             -   name: Deploy Artifact to Production
-                run: dep deploy-artifact prod
+                run: dep deploy-artifact prod -vv
