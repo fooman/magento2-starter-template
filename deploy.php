@@ -22,8 +22,7 @@ set('languages', getenv('M2_DEPLOYER_LOCALES'));
 // OPcache configuration
 #task('cache:clear:opcache', 'sudo /etc/init.d/php7.3-fpm reload');
 #after('cache:clear', 'cache:clear:opcache');
-
-after('deploy:override_shared', 'deploy:writable');
+#after('deploy:override_shared', 'deploy:writable');
 
 // Build host
 localhost('build');
