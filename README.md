@@ -5,11 +5,14 @@ Blog post coming shortly on https://store.fooman.co.nz/blog
 Use from template
 
 Add secrets
+```
 REPO_MAGENTO_PASSWORD
 REPO_MAGENTO_USERNAME
 SSH_PRIVATE_KEY
 SSH_KNOWN_HOSTS
+
 ssh-keyscan rsa -t <server IP>
+```
 
 Configure m2-deploy-settings.txt
 commit and push
