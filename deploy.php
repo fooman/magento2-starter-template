@@ -20,8 +20,8 @@ set('repository', '');
 set('languages', getenv('M2_DEPLOYER_LOCALES'));
 
 // OPcache configuration
-task('cache:clear:opcache', 'sudo /etc/init.d/php7.3-fpm reload');
-after('cache:clear', 'cache:clear:opcache');
+#task('cache:clear:opcache', 'sudo /etc/init.d/php7.3-fpm reload');
+#after('cache:clear', 'cache:clear:opcache');
 
 after('deploy:override_shared', 'deploy:writable');
 
@@ -31,22 +31,14 @@ localhost('build');
 // Remote Servers
 host('stage')
     ->hostname(getenv('M2_DEPLOYER_STAGE_HOSTNAME'))
-    ->set('http_user', 'www-data')
     ->user(getenv('M2_DEPLOYER_STAGE_USER'))
     ->set('deploy_path', getenv('M2_DEPLOYER_STAGE_PATH'))
     ->stage('stage')
-    ->roles('app')
-    ->set('writable_dirs', get('override_shared_dirs'))
-    ->set('writable_mode', 'chmod')
-    ->set('writable_chmod_mode', '0770');
+    ->roles('app');
 
 host('prod')
     ->hostname(getenv('M2_DEPLOYER_PROD_HOSTNAME'))
-    ->set('http_user', 'www-data')
     ->user(getenv('M2_DEPLOYER_PROD_USER'))
     ->set('deploy_path', getenv('M2_DEPLOYER_PROD_PATH'))
     ->stage('prod')
-    ->roles('app')
-    ->set('writable_dirs', get('override_shared_dirs'))
-    ->set('writable_mode', 'chmod')
-    ->set('writable_chmod_mode', '0770');
+    ->roles('app');
