@@ -22,12 +22,12 @@
         </testsuite>-->
         <testsuite name="Magento Integration Tests">
             <directory suffix="Test.php">testsuite/Magento/Checkout</directory>
-            <directory suffix="Test.php">testsuite/Magento/Catalog</directory>
+            <!--<directory suffix="Test.php">testsuite/Magento/Catalog</directory>
             <directory suffix="Test.php">testsuite/Magento/Sales</directory>
             <directory suffix="Test.php">testsuite/Magento/Quote</directory>
             <directory suffix="Test.php">testsuite/Magento/Tax</directory>
             <directory suffix="Test.php">testsuite/Magento/Payment</directory>
-            <directory suffix="Test.php">testsuite/Magento/Backend</directory>
+            <directory suffix="Test.php">testsuite/Magento/Backend</directory>-->
             <exclude>testsuite/Magento/MemoryUsageTest.php</exclude>
             <exclude>testsuite/Magento/Catalog/Model/Layer/Filter/Price/AlgorithmBaseTest.php</exclude>
             <exclude>testsuite/Magento/Config/Block/System/Config/FormTest.php</exclude>
