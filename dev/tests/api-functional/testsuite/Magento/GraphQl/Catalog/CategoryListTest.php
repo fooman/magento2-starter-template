@@ -7,6 +7,8 @@ declare(strict_types=1);
 
 namespace Magento\GraphQl\Catalog;
 
+use Magento\Catalog\Model\ResourceModel\Category\Collection as CategoryCollection;
+use Magento\Framework\ObjectManagerInterface;
 use Magento\Store\Model\StoreManagerInterface;
 use Magento\TestFramework\Helper\Bootstrap;
 use Magento\TestFramework\TestCase\GraphQlAbstract;
@@ -16,6 +18,16 @@ use Magento\TestFramework\TestCase\GraphQlAbstract;
  */
 class CategoryListTest extends GraphQlAbstract
 {
+    /**
+     * @var ObjectManagerInterface
+     */
+    private $objectManager;
+
+    protected function setUp()
+    {
+        $this->objectManager = Bootstrap::getObjectManager();
+    }
+
     /**
      * @magentoApiDataFixture Magento/Catalog/_files/categories.php
      * @dataProvider filterSingleCategoryDataProvider
@@ -174,8 +186,8 @@ QUERY;
         //Check base category products
         $expectedBaseCategoryProducts = [
             ['sku' => 'simple', 'name' => 'Simple Product'],
-            ['sku' => '12345', 'name' => 'Simple Product Two'],
-            ['sku' => 'simple-4', 'name' => 'Simple Product Three']
+            ['sku' => 'simple-4', 'name' => 'Simple Product Three'],
+            ['sku' => '12345', 'name' => 'Simple Product Two']
         ];
         $this->assertCategoryProducts($baseCategory, $expectedBaseCategoryProducts);
         //Check base category children
@@ -190,8 +202,8 @@ QUERY;
         $this->assertEquals('Category 1.1', $firstChildCategory['name']);
         $this->assertEquals('Category 1.1 description.', $firstChildCategory['description']);
         $firstChildCategoryExpectedProducts = [
-            ['sku' => 'simple', 'name' => 'Simple Product'],
             ['sku' => '12345', 'name' => 'Simple Product Two'],
+            ['sku' => 'simple', 'name' => 'Simple Product'],
         ];
         $this->assertCategoryProducts($firstChildCategory, $firstChildCategoryExpectedProducts);
         $firstChildCategoryChildren = [['name' =>'Category 1.1.1']];
@@ -201,8 +213,8 @@ QUERY;
         $this->assertEquals('Category 1.2', $secondChildCategory['name']);
         $this->assertEquals('Its a description of Test Category 1.2', $secondChildCategory['description']);
         $firstChildCategoryExpectedProducts = [
+            ['sku' => 'simple-4', 'name' => 'Simple Product Three'],
             ['sku' => 'simple', 'name' => 'Simple Product'],
-            ['sku' => 'simple-4', 'name' => 'Simple Product Three']
         ];
         $this->assertCategoryProducts($secondChildCategory, $firstChildCategoryExpectedProducts);
         $firstChildCategoryChildren = [];
@@ -265,8 +277,8 @@ QUERY;
         //Check base category products
         $expectedBaseCategoryProducts = [
             ['sku' => 'simple', 'name' => 'Simple Product'],
-            ['sku' => '12345', 'name' => 'Simple Product Two'],
-            ['sku' => 'simple-4', 'name' => 'Simple Product Three']
+            ['sku' => 'simple-4', 'name' => 'Simple Product Three'],
+            ['sku' => '12345', 'name' => 'Simple Product Two']
         ];
         $this->assertCategoryProducts($baseCategory, $expectedBaseCategoryProducts);
         //Check base category children
@@ -281,8 +293,8 @@ QUERY;
         $this->assertEquals('Its a description of Test Category 1.2', $firstChildCategory['description']);
 
         $firstChildCategoryExpectedProducts = [
-            ['sku' => 'simple', 'name' => 'Simple Product'],
-            ['sku' => 'simple-4', 'name' => 'Simple Product Three']
+            ['sku' => 'simple-4', 'name' => 'Simple Product Three'],
+            ['sku' => 'simple', 'name' => 'Simple Product']
         ];
         $this->assertCategoryProducts($firstChildCategory, $firstChildCategoryExpectedProducts);
         $firstChildCategoryChildren = [];
@@ -333,7 +345,7 @@ QUERY;
     }
 }
 QUERY;
-        $storeManager = Bootstrap::getObjectManager()->get(StoreManagerInterface::class);
+        $storeManager = $this->objectManager->get(StoreManagerInterface::class);
         $storeRootCategoryId = $storeManager->getStore()->getRootCategoryId();
 
         $result = $this->graphQlQuery($query);
@@ -367,6 +379,46 @@ QUERY;
         $this->assertArrayNotHasKey('errors', $result);
         $this->assertArrayHasKey('categoryList', $result);
         $this->assertEquals([], $result['categoryList']);
+    }
+
+    /**
+     * Test category image full name is returned
+     *
+     * @magentoApiDataFixture Magento/Catalog/_files/catalog_category_with_long_image_name.php
+     */
+    public function testCategoryImageName()
+    {
+        /** @var CategoryCollection $categoryCollection */
+        $categoryCollection = $this->objectManager->get(CategoryCollection::class);
+        $categoryModel = $categoryCollection
+            ->addAttributeToSelect('image')
+            ->addAttributeToFilter('name', ['eq' => 'Parent Image Category'])
+            ->getFirstItem();
+        $categoryId = $categoryModel->getId();
+
+        $query = <<<QUERY
+    {
+categoryList(filters: {ids: {in: ["$categoryId"]}}) {
+  id
+  name
+  image
+ }
+}
+QUERY;
+        $storeManager = $this->objectManager->get(StoreManagerInterface::class);
+        $storeBaseUrl = $storeManager->getStore()->getBaseUrl('media');
+
+        $expected = "catalog/category/magento_long_image_name_magento_long_image_name_magento_long_image_name.jpg";
+        $expectedImageUrl = rtrim($storeBaseUrl, '/') . '/' . $expected;
+
+        $response = $this->graphQlQuery($query);
+        $categoryList = $response['categoryList'];
+        $this->assertArrayNotHasKey('errors', $response);
+        $this->assertNotEmpty($response['categoryList']);
+        $expectedImageUrl = str_replace('index.php/', '', $expectedImageUrl);
+        $categoryList[0]['image'] = str_replace('index.php/', '', $categoryList[0]['image']);
+        $this->assertEquals('Parent Image Category', $categoryList[0]['name']);
+        $this->assertEquals($expectedImageUrl, $categoryList[0]['image']);
     }
 
     /**

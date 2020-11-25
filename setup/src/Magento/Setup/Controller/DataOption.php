@@ -14,6 +14,8 @@ use Zend\View\Model\ViewModel;
 
 /**
  * Controller of data option selection
+ *
+ * @deprecated Starting from Magento 2.3.6 Web Setup Wizard is deprecated
  */
 class DataOption extends AbstractActionController
 {
@@ -56,6 +58,6 @@ class DataOption extends AbstractActionController
         if (isset($params['moduleName'])) {
             $uninstallClasses = $this->uninstallCollector->collectUninstall([$params['moduleName']]);
         }
-        return new JsonModel(['hasUninstall' => isset($uninstallClasses) && sizeof($uninstallClasses) > 0]);
+        return new JsonModel(['hasUninstall' => isset($uninstallClasses) && count($uninstallClasses) > 0]);
     }
 }
