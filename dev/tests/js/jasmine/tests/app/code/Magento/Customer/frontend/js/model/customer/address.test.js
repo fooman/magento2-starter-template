@@ -22,12 +22,9 @@ define([
         it('Check on empty object.', function () {
             var addressData = {
                 region: {}
-            },
-            expected = {
-                customAttributes: []
             };
 
-            expect(JSON.stringify(customerAddress(addressData))).toEqual(JSON.stringify(expected));
+            expect(JSON.stringify(customerAddress(addressData))).toEqual(JSON.stringify({}));
         });
 
         it('Check on function call with empty address data.', function () {
@@ -52,8 +49,7 @@ define([
                     }
                 }),
                 expected = {
-                    regionId: '1',
-                    customAttributes: []
+                    regionId: '1'
                 };
 
             expect(JSON.stringify(result)).toEqual(JSON.stringify(expected));

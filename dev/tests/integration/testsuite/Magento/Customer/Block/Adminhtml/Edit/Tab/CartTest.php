@@ -3,39 +3,82 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
-declare(strict_types=1);
-
 namespace Magento\Customer\Block\Adminhtml\Edit\Tab;
 
+use Magento\Backend\Block\Template\Context;
 use Magento\Backend\Model\Session\Quote as SessionQuote;
+use Magento\Customer\Controller\RegistryConstants;
+use Magento\Framework\ObjectManagerInterface;
+use Magento\Framework\Registry;
 use Magento\Quote\Model\Quote;
+use Magento\Store\Model\StoreManagerInterface;
 
 /**
- * Class checks customer's shopping cart block with simple product and simple product with options.
+ * Magento\Customer\Block\Adminhtml\Edit\Tab\Cart
  *
- * @see \Magento\Customer\Block\Adminhtml\Edit\Tab\Cart
  * @magentoAppArea adminhtml
+ * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
-class CartTest extends AbstractCartTest
+class CartTest extends \PHPUnit\Framework\TestCase
 {
+    const CUSTOMER_ID_VALUE = 1234;
+
     /**
-     * @magentoDataFixture Magento/Checkout/_files/customer_quote_with_items_simple_product_options.php
-     *
-     * @return void
+     * @var Context
      */
-    public function testProductOptionsView(): void
+    private $_context;
+
+    /**
+     * @var Registry
+     */
+    private $_coreRegistry;
+
+    /**
+     * @var StoreManagerInterface
+     */
+    private $_storeManager;
+
+    /**
+     * @var Cart
+     */
+    private $_block;
+
+    /**
+     * @var ObjectManagerInterface
+     */
+    private $_objectManager;
+
+    /**
+     * @inheritdoc
+     */
+    protected function setUp(): void
     {
-        $this->processCheckQuoteItems('customer_uk_address@test.com');
+        $this->_objectManager = \Magento\TestFramework\Helper\Bootstrap::getObjectManager();
+
+        $this->_storeManager = $this->_objectManager->get(\Magento\Store\Model\StoreManager::class);
+        $this->_context = $this->_objectManager->get(
+            \Magento\Backend\Block\Template\Context::class,
+            ['storeManager' => $this->_storeManager]
+        );
+
+        $this->_coreRegistry = $this->_objectManager->get(\Magento\Framework\Registry::class);
+        $this->_coreRegistry->register(RegistryConstants::CURRENT_CUSTOMER_ID, self::CUSTOMER_ID_VALUE);
+
+        $this->_block = $this->_objectManager->get(
+            \Magento\Framework\View\LayoutInterface::class
+        )->createBlock(
+            \Magento\Customer\Block\Adminhtml\Edit\Tab\Cart::class,
+            '',
+            ['context' => $this->_context, 'registry' => $this->_coreRegistry]
+        );
     }
 
     /**
-     * @magentoDataFixture Magento/Checkout/_files/quote_with_address_saved.php
-     * @magentoDataFixture Magento/Customer/_files/two_customers.php
-     * @return void
+     * @inheritdoc
      */
-    public function testCustomerWithoutQuoteView(): void
+    protected function tearDown(): void
     {
-        $this->processCheckWithoutQuoteItems('customer_two@example.com');
+        $this->_coreRegistry->unregister(RegistryConstants::CURRENT_CUSTOMER_ID);
     }
 
     /**
@@ -52,23 +95,23 @@ class CartTest extends AbstractCartTest
      */
     public function testVerifyCollectionWithQuote(int $customerId, bool $guest, bool $contains): void
     {
-        $session = $this->objectManager->create(SessionQuote::class);
+        $session = $this->_objectManager->create(SessionQuote::class);
         $session->setCustomerId($customerId);
-        $quoteFixture = $this->objectManager->create(Quote::class);
+        $quoteFixture = $this->_objectManager->create(Quote::class);
         $quoteFixture->load('test01', 'reserved_order_id');
         $quoteFixture->setCustomerIsGuest($guest)
                      ->setCustomerId($customerId)
                      ->save();
-        $this->block->toHtml();
+        $this->_block->toHtml();
         if ($contains) {
-            $this->assertContains(
+            $this->assertStringContainsString(
                 "We couldn&#039;t find any records",
-                $this->block->getGridParentHtml()
+                $this->_block->getGridParentHtml()
             );
         } else {
-            $this->assertNotContains(
+            $this->assertStringNotContainsString(
                 "We couldn&#039;t find any records",
-                $this->block->getGridParentHtml()
+                $this->_block->getGridParentHtml()
             );
         }
     }
@@ -101,7 +144,7 @@ class CartTest extends AbstractCartTest
      */
     public function testGetCustomerId(): void
     {
-        $this->assertEquals(self::CUSTOMER_ID_VALUE, $this->block->getCustomerId());
+        $this->assertEquals(self::CUSTOMER_ID_VALUE, $this->_block->getCustomerId());
     }
 
     /**
@@ -111,7 +154,7 @@ class CartTest extends AbstractCartTest
      */
     public function testGetGridUrl(): void
     {
-        $this->assertContains('/backend/customer/index/cart', $this->block->getGridUrl());
+        $this->assertStringContainsString('/backend/customer/index/cart', $this->_block->getGridUrl());
     }
 
     /**
@@ -121,13 +164,20 @@ class CartTest extends AbstractCartTest
      */
     public function testGetGridParentHtml(): void
     {
+        $this->_block = $this->_objectManager->get(
+            \Magento\Framework\View\LayoutInterface::class
+        )->createBlock(
+            \Magento\Customer\Block\Adminhtml\Edit\Tab\Cart::class,
+            '',
+            []
+        );
         $mockCollection = $this->getMockBuilder(\Magento\Framework\Data\Collection::class)
             ->disableOriginalConstructor()
             ->getMock();
-        $this->block->setCollection($mockCollection);
-        $this->assertContains(
+        $this->_block->setCollection($mockCollection);
+        $this->assertStringContainsString(
             "<div class=\"admin__data-grid-header admin__data-grid-toolbar\"",
-            $this->block->getGridParentHtml()
+            $this->_block->getGridParentHtml()
         );
     }
 
@@ -140,7 +190,7 @@ class CartTest extends AbstractCartTest
     {
         $row = new \Magento\Framework\DataObject();
         $row->setProductId(1);
-        $this->assertContains('/backend/catalog/product/edit/id/1', $this->block->getRowUrl($row));
+        $this->assertStringContainsString('/backend/catalog/product/edit/id/1', $this->_block->getRowUrl($row));
     }
 
     /**
@@ -150,11 +200,11 @@ class CartTest extends AbstractCartTest
      */
     public function testGetHtml(): void
     {
-        $html = $this->block->toHtml();
-        $this->assertContains("<div id=\"customer_cart_grid\"", $html);
-        $this->assertContains("<div class=\"admin__data-grid-header admin__data-grid-toolbar\"", $html);
-        $this->assertContains("customer_cart_gridJsObject = new varienGrid(\"customer_cart_grid\",", $html);
-        $this->assertContains(
+        $html = $this->_block->toHtml();
+        $this->assertStringContainsString("<div id=\"customer_cart_grid\"", $html);
+        $this->assertStringContainsString("<div class=\"admin__data-grid-header admin__data-grid-toolbar\"", $html);
+        $this->assertStringContainsString("customer_cart_gridJsObject = new varienGrid(\"customer_cart_grid\",", $html);
+        $this->assertStringContainsString(
             'backend\u002Fcustomer\u002Fcart_product_composite_cart\u002Fconfigure\u002Fcustomer_id\u002F'
             . self::CUSTOMER_ID_VALUE,
             $html

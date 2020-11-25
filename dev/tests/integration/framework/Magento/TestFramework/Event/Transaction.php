@@ -99,10 +99,8 @@ class Transaction
                  */
                 set_error_handler(
                     function ($errNo, $errStr, $errFile, $errLine) use ($test) {
-                        if (error_reporting() & $errNo) {
-                            $errMsg = sprintf("%s: %s in %s:%s.", "Warning", $errStr, $errFile, $errLine);
-                            $test->getTestResultObject()->addError($test, new \PHPUnit\Framework\Warning($errMsg), 0);
-                        }
+                        $errMsg = sprintf("%s: %s in %s:%s.", "Warning", $errStr, $errFile, $errLine);
+                        $test->getTestResultObject()->addError($test, new \PHPUnit\Framework\Warning($errMsg), 0);
 
                         // Allow error to be handled by next error handler
                         return false;

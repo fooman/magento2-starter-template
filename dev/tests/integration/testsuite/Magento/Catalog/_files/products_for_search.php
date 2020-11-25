@@ -4,19 +4,13 @@
  * See COPYING.txt for license details.
  */
 
-include 'category.php';
-
 use Magento\Catalog\Api\CategoryLinkManagementInterface;
 use Magento\Catalog\Model\Product;
 use Magento\Catalog\Model\Product\Attribute\Source\Status;
 use Magento\Catalog\Model\Product\Visibility;
-use Magento\TestFramework\Helper\Bootstrap;
-use Magento\Catalog\Api\ProductRepositoryInterface;
+use Magento\TestFramework\Workaround\Override\Fixture\Resolver;
 
-$objectManager = Bootstrap::getObjectManager();
-/** @var ProductRepositoryInterface $productRepository */
-$productRepository = $objectManager->get(ProductRepositoryInterface::class);
-
+Resolver::getInstance()->requireDataFixture('Magento/Catalog/_files/category.php');
 $products = [
     [
         'type' => 'simple',
@@ -96,13 +90,14 @@ $products = [
 ];
 
 /** @var CategoryLinkManagementInterface $categoryLinkManagement */
-$categoryLinkManagement = $objectManager->create(CategoryLinkManagementInterface::class);
+$categoryLinkManagement = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()
+    ->create(CategoryLinkManagementInterface::class);
 
 $categoriesToAssign = [];
 
 foreach ($products as $data) {
     /** @var $product Product */
-    $product = $objectManager->create(Product::class);
+    $product = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->create(Product::class);
     $product
         ->setTypeId($data['type'])
         ->setId($data['id'])
@@ -116,8 +111,8 @@ foreach ($products as $data) {
         ->setMetaDescription($data['meta_keyword'])
         ->setVisibility($data['visibility'])
         ->setStatus($data['status'])
-        ->setStockData(['use_config_manage_stock' => 0]);
-    $productRepository->save($product);
+        ->setStockData(['use_config_manage_stock' => 0])
+        ->save();
 
     $categoriesToAssign[$data['sku']][] = $data['category_id'];
 }

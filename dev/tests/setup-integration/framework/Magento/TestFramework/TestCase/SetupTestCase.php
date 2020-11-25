@@ -3,7 +3,6 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
-
 declare(strict_types=1);
 
 namespace Magento\TestFramework\TestCase;
@@ -36,9 +35,13 @@ class SetupTestCase extends \PHPUnit\Framework\TestCase implements MutableDataIn
     /**
      * @inheritDoc
      */
-    public function __construct($name = null, array $data = [], $dataName = '')
-    {
+    public function __construct(
+        $name = null,
+        array $data = [],
+        $dataName = ''
+    ) {
         parent::__construct($name, $data, $dataName);
+
         $this->sqlVersionProvider = Bootstrap::getObjectManager()->get(SqlVersionProvider::class);
     }
 
@@ -60,12 +63,14 @@ class SetupTestCase extends \PHPUnit\Framework\TestCase implements MutableDataIn
 
     /**
      * @inheritdoc
-     *
-     * @throws ConnectionException
      */
     public function getData()
     {
-        return $this->data[$this->getDbKey()] ?? $this->data[DataProviderFromFile::FALLBACK_VALUE];
+        if (array_key_exists($this->getDbKey(), $this->data)) {
+            return $this->data[$this->getDbKey()];
+        }
+
+        return $this->data[DataProviderFromFile::FALLBACK_VALUE];
     }
 
     /**
@@ -83,7 +88,6 @@ class SetupTestCase extends \PHPUnit\Framework\TestCase implements MutableDataIn
      * Get db key to decide which file to use.
      *
      * @return string
-     * @throws ConnectionException
      */
     private function getDbKey(): string
     {

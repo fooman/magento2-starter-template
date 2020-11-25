@@ -32,18 +32,29 @@ class AttributeTest extends TestCase
     /**
      * @inheritdoc
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->indexerProcessor = Bootstrap::getObjectManager()->create(Processor::class);
         $this->attribute = Bootstrap::getObjectManager()->create(Attribute::class);
     }
 
     /**
+     * Check index status on clean database.
+     *
+     * @magentoDataFixture Magento/CatalogSearch/_files/full_reindex.php
+     */
+    public function testCheckIndexStatusOnCleanDatabase(): void
+    {
+        $this->assertTrue($this->indexerProcessor->getIndexer()->isValid());
+    }
+
+    /**
      * Check index status after create non searchable attribute.
      *
      * @return void
-     * @magentoDataFixture Magento/CatalogSearch/_files/full_reindex.php
      * @magentoDataFixture Magento/Catalog/_files/dropdown_attribute.php
+     * @magentoDbIsolation enabled
+     * @depends testCheckIndexStatusOnCleanDatabase
      */
     public function testCheckIndexStatusAfterCreateNonSearchableAttribute(): void
     {
@@ -51,11 +62,28 @@ class AttributeTest extends TestCase
     }
 
     /**
+     * Check index status after non searchable attribute update.
+     *
+     * @return void
+     * @magentoDataFixture Magento/Catalog/_files/dropdown_attribute.php
+     * @magentoDbIsolation enabled
+     * @depends testCheckIndexStatusOnCleanDatabase
+     */
+    public function testCheckIndexStatusAfterNonSearchableAttributeUpdate(): void
+    {
+        $this->attribute->load('dropdown_attribute', 'attribute_code');
+        $this->assertFalse($this->attribute->isObjectNew());
+        $this->attribute->setIsGlobal(1)->save();
+        $this->assertTrue($this->indexerProcessor->getIndexer()->isValid());
+    }
+
+    /**
      * Check index status after create searchable attribute.
      *
      * @return void
-     * @magentoDataFixture Magento/CatalogSearch/_files/full_reindex.php
      * @magentoDataFixture Magento/CatalogSearch/_files/search_attributes.php
+     * @magentoDbIsolation enabled
+     * @depends testCheckIndexStatusOnCleanDatabase
      */
     public function testCheckIndexStatusAfterCreateSearchableAttribute(): void
     {
@@ -69,6 +97,7 @@ class AttributeTest extends TestCase
      * @return void
      * @dataProvider searchableAttributesDataProvider
      * @magentoDataFixture Magento/Catalog/_files/dropdown_attribute.php
+     * @magentoDbIsolation enabled
      */
     public function testCheckIndexStatusAfterUpdateNonSearchableAttributeToSearchable(string $field): void
     {
@@ -77,7 +106,7 @@ class AttributeTest extends TestCase
         $this->attribute->loadByCode(Product::ENTITY, 'dropdown_attribute');
         $this->assertFalse($this->attribute->isObjectNew());
         $this->attribute->setData($field, true)->save();
-        $this->assertTrue($this->indexerProcessor->getIndexer()->isInvalid());
+        $this->assertFalse($this->indexerProcessor->getIndexer()->isValid());
     }
 
     /**
@@ -97,6 +126,8 @@ class AttributeTest extends TestCase
      *
      * @return void
      * @magentoDataFixture Magento/CatalogSearch/_files/search_attributes.php
+     * @magentoDbIsolation enabled
+     * @depends testCheckIndexStatusOnCleanDatabase
      */
     public function testCheckIndexStatusAfterUpdateSearchableAttributeToNonSearchable(): void
     {
@@ -105,22 +136,6 @@ class AttributeTest extends TestCase
         $this->attribute->loadByCode(Product::ENTITY, 'test_catalog_view');
         $this->assertFalse($this->attribute->isObjectNew());
         $this->attribute->setIsFilterable(false)->save();
-        $this->assertTrue($this->indexerProcessor->getIndexer()->isInValid());
-    }
-
-    /**
-     * Check index status after non searchable attribute update.
-     *
-     * @return void
-     * @magentoDataFixture Magento/Catalog/_files/dropdown_attribute.php
-     */
-    public function testCheckIndexStatusAfterNonSearchableAttributeUpdate(): void
-    {
-        $this->indexerProcessor->reindexAll();
-        $this->assertTrue($this->indexerProcessor->getIndexer()->isValid());
-        $this->attribute->load('dropdown_attribute', 'attribute_code');
-        $this->assertFalse($this->attribute->isObjectNew());
-        $this->attribute->setIsGlobal(1)->save();
-        $this->assertTrue($this->indexerProcessor->getIndexer()->isValid());
+        $this->assertFalse($this->indexerProcessor->getIndexer()->isValid());
     }
 }

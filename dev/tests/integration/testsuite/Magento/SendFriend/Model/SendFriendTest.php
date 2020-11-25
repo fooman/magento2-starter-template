@@ -7,13 +7,13 @@ declare(strict_types=1);
 
 namespace Magento\SendFriend\Model;
 
-use Laminas\Stdlib\Parameters;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\ObjectManagerInterface;
 use Magento\Framework\Stdlib\CookieManagerInterface;
 use Magento\SendFriend\Helper\Data as SendFriendHelper;
 use Magento\TestFramework\Helper\Bootstrap;
 use PHPUnit\Framework\TestCase;
+use Zend\Stdlib\Parameters;
 
 /**
  * Class checks send friend model behavior
@@ -37,7 +37,7 @@ class SendFriendTest extends TestCase
     /**
      * @inheritdoc
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
 

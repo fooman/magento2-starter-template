@@ -5,45 +5,33 @@
  */
 namespace Magento\Sales\Model\Order\Email\Sender;
 
-use Magento\Framework\App\Area;
-use Magento\Sales\Model\Order;
-use Magento\Sales\Model\Order\Invoice;
-use Magento\TestFramework\Helper\Bootstrap;
-use PHPUnit\Framework\TestCase;
-
-class InvoiceSenderTest extends TestCase
+class InvoiceSenderTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @magentoDataFixture Magento/Sales/_files/order.php
      */
     public function testSend()
     {
-        Bootstrap::getInstance()
-            ->loadArea(Area::AREA_FRONTEND);
-        $order = Bootstrap::getObjectManager()
-            ->create(Order::class);
+        \Magento\TestFramework\Helper\Bootstrap::getInstance()
+            ->loadArea(\Magento\Framework\App\Area::AREA_FRONTEND);
+        $order = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()
+            ->create(\Magento\Sales\Model\Order::class);
         $order->loadByIncrementId('100000001');
         $order->setCustomerEmail('customer@example.com');
 
-        $invoice = Bootstrap::getObjectManager()->create(
-            Invoice::class
+        $invoice = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->create(
+            \Magento\Sales\Model\Order\Invoice::class
         );
         $invoice->setOrder($order);
-        $invoice->setTotalQty(1);
-        $invoice->setBaseSubtotal(50);
-        $invoice->setBaseTaxAmount(10);
-        $invoice->setBaseShippingAmount(5);
+
         /** @var InvoiceSender $invoiceSender */
-        $invoiceSender = Bootstrap::getObjectManager()
-            ->create(InvoiceSender::class);
+        $invoiceSender = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()
+            ->create(\Magento\Sales\Model\Order\Email\Sender\InvoiceSender::class);
 
         $this->assertEmpty($invoice->getEmailSent());
         $result = $invoiceSender->send($invoice, true);
 
         $this->assertTrue($result);
         $this->assertNotEmpty($invoice->getEmailSent());
-        $this->assertEquals($invoice->getBaseSubtotal(), $order->getBaseSubtotal());
-        $this->assertEquals($invoice->getBaseTaxAmount(), $order->getBaseTaxAmount());
-        $this->assertEquals($invoice->getBaseShippingAmount(), $order->getBaseShippingAmount());
     }
 }

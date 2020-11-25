@@ -15,7 +15,6 @@ use Magento\Catalog\Model\ResourceModel\Category as CategoryResource;
 use Magento\CatalogUrlRewrite\Model\Map\DataCategoryUrlRewriteDatabaseMap;
 use Magento\CatalogUrlRewrite\Model\Map\DataProductUrlRewriteDatabaseMap;
 use Magento\CatalogUrlRewrite\Model\ResourceModel\Category\Product;
-use Magento\Store\Api\WebsiteRepositoryInterface;
 use Magento\Store\Model\ScopeInterface;
 use Magento\UrlRewrite\Model\Exception\UrlAlreadyExistsException;
 use Magento\UrlRewrite\Model\OptionProvider;
@@ -49,7 +48,7 @@ class CategoryUrlRewriteTest extends AbstractUrlRewriteTest
     /**
      * @inheritdoc
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -64,8 +63,6 @@ class CategoryUrlRewriteTest extends AbstractUrlRewriteTest
     }
 
     /**
-     * Test url rewrite after category save
-     *
      * @magentoDataFixture Magento/Catalog/_files/category_with_position.php
      * @dataProvider categoryProvider
      * @param array $data
@@ -83,8 +80,6 @@ class CategoryUrlRewriteTest extends AbstractUrlRewriteTest
     }
 
     /**
-     * Provider. categoryProvider
-     *
      * @return array
      */
     public function categoryProvider(): array
@@ -128,8 +123,6 @@ class CategoryUrlRewriteTest extends AbstractUrlRewriteTest
     }
 
     /**
-     * Test category product url rewrite
-     *
      * @magentoDataFixture Magento/Catalog/_files/category_tree.php
      * @magentoDataFixture Magento/Catalog/_files/second_product_simple.php
      * @dataProvider productRewriteProvider
@@ -147,8 +140,6 @@ class CategoryUrlRewriteTest extends AbstractUrlRewriteTest
     }
 
     /**
-     * Provider. productRewriteProvider
-     *
      * @return array
      */
     public function productRewriteProvider(): array
@@ -174,8 +165,6 @@ class CategoryUrlRewriteTest extends AbstractUrlRewriteTest
     }
 
     /**
-     * Test url rewrites after category save with existing url key
-     *
      * @magentoDataFixture Magento/CatalogUrlRewrite/_files/categories_with_products.php
      * @magentoAppIsolation enabled
      * @dataProvider existingUrlProvider
@@ -190,8 +179,6 @@ class CategoryUrlRewriteTest extends AbstractUrlRewriteTest
     }
 
     /**
-     * Provider. existingUrlProvider
-     *
      * @return array
      */
     public function existingUrlProvider(): array
@@ -239,8 +226,6 @@ class CategoryUrlRewriteTest extends AbstractUrlRewriteTest
     }
 
     /**
-     * Test url rewrites after category move
-     *
      * @magentoDataFixture Magento/Catalog/_files/category_product.php
      * @magentoDataFixture Magento/Catalog/_files/catalog_category_with_slash.php
      * @dataProvider categoryMoveProvider
@@ -302,7 +287,6 @@ class CategoryUrlRewriteTest extends AbstractUrlRewriteTest
     }
 
     /**
-     * Test url rewrites after category delete
      * @magentoDataFixture Magento/Catalog/_files/category.php
      * @return void
      */
@@ -318,8 +302,6 @@ class CategoryUrlRewriteTest extends AbstractUrlRewriteTest
     }
 
     /**
-     * Test url rewrites after category with products delete
-     *
      * @magentoAppArea adminhtml
      * @magentoDataFixture Magento/CatalogUrlRewrite/_files/categories_with_product_ids.php
      * @return void
@@ -343,8 +325,6 @@ class CategoryUrlRewriteTest extends AbstractUrlRewriteTest
     }
 
     /**
-     * Test category url rewrite per Store Views
-     *
      * @magentoDataFixture Magento/Store/_files/second_store.php
      * @magentoDataFixture Magento/Catalog/_files/category.php
      * @return void
@@ -370,53 +350,6 @@ class CategoryUrlRewriteTest extends AbstractUrlRewriteTest
             $item->getData('store_id') == $secondStoreId
                 ? $this->assertEquals($urlKeySecondStore . $urlSuffix, $item->getRequestPath())
                 : $this->assertEquals($urlKeyFirstStore . $urlSuffix, $item->getRequestPath());
-        }
-    }
-
-    /**
-     * Test category url rewrite while reassign store view
-     *
-     * @magentoAppArea adminhtml
-     * @magentoDataFixture Magento/Store/_files/second_store_group_with_second_website.php
-     * @magentoDataFixture Magento/Catalog/_files/category.php
-     * @return void
-     */
-    public function testCategoryUrlRewriteMovingToOtherStoreView(): void
-    {
-        $categoryId = 333;
-        $store = $this->storeRepository->get('default');
-        $storeId = $store->getId();
-        $urlRewrites = [
-            ['category-1-updated.html', 'category-1.html'],
-            ['category-1-most-recent.html', 'category-1-updated.html'],
-        ];
-        foreach ($urlRewrites as $rewrite) {
-            /** @var \Magento\UrlRewrite\Model\UrlRewrite $urlRewrite */
-            $urlRewrite = $this->objectManager->create(\Magento\UrlRewrite\Model\UrlRewrite::class);
-            $urlRewrite->setEntityType(\Magento\CatalogUrlRewrite\Model\CategoryUrlRewriteGenerator::ENTITY_TYPE)
-                ->setEntityId($categoryId)
-                ->setRequestPath($rewrite[0])
-                ->setTargetPath($rewrite[1])
-                ->setRedirectType(\Magento\UrlRewrite\Model\OptionProvider::PERMANENT)
-                ->setStoreId($storeId);
-            $urlRewrite->save();
-        }
-
-        /** @var WebsiteRepositoryInterface $websiteRepo */
-        $websiteRepo = $this->objectManager->get(WebsiteRepositoryInterface::class);
-        $website = $websiteRepo->get('test');
-        $group = $website->getDefaultGroup();
-        $group->setRootCategoryId(2);
-        $group->save();
-        $groupId = $group->getId();
-        $store->setStoreGroupId($groupId);
-        $store->save();
-
-        $urlRewriteItems = $this->getEntityRewriteCollection($categoryId)->getItems();
-        $this->assertTrue(count($urlRewriteItems) === 3);
-        $expectedRewriteRequestPaths = ['category-1.html', 'category-1-updated.html', 'category-1-most-recent.html'];
-        foreach ($urlRewriteItems as $item) {
-            $this->assertTrue(in_array($item->getRequestPath(), $expectedRewriteRequestPaths));
         }
     }
 

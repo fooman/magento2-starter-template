@@ -13,7 +13,6 @@ use Magento\Framework\App\Request\Http as HttpRequest;
 use Magento\Framework\Message\MessageInterface;
 use Magento\Framework\Phrase;
 use Magento\Framework\Url\EncoderInterface;
-use Magento\Framework\UrlInterface;
 use Magento\TestFramework\TestCase\AbstractController;
 
 /**
@@ -30,14 +29,20 @@ class LoginPostTest extends AbstractController
     private $urlEncoder;
 
     /**
+     * @var Url
+     */
+    private $customerUrl;
+
+    /**
      * @inheritdoc
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
 
         $this->session = $this->_objectManager->get(Session::class);
         $this->urlEncoder = $this->_objectManager->get(EncoderInterface::class);
+        $this->customerUrl = $this->_objectManager->get(Url::class);
     }
 
     /**
@@ -99,8 +104,6 @@ class LoginPostTest extends AbstractController
     }
 
     /**
-     * Tests correct message appears when Sign In with unconfirmed Customer.
-     *
      * @magentoDataFixture Magento/Customer/_files/customer_confirmation_config_enable.php
      * @magentoDataFixture Magento/Customer/_files/unconfirmed_customer.php
      *
@@ -108,25 +111,20 @@ class LoginPostTest extends AbstractController
      *
      * @return void
      */
-    public function testLoginWithUnconfirmedCustomer(): void
+    public function testLoginWithUnconfirmedPassword(): void
     {
         $email = 'unconfirmedcustomer@example.com';
-        $urlBuilder = $this->_objectManager->get(UrlInterface::class);
         $this->prepareRequest($email, 'Qwert12345');
         $this->dispatch('customer/account/loginPost');
         $this->assertEquals($email, $this->session->getUsername());
-        $expectedMessage = __(
-            'This account is not confirmed. <a href="'
-            . $urlBuilder->getUrl('customer/account/confirmation', ['_query' => ['email' => $email]])
-            . '">Click here</a> to resend confirmation email.'
+        $message = __(
+            'This account is not confirmed. <a href="%1">Click here</a> to resend confirmation email.',
+            $this->customerUrl->getEmailConfirmationUrl($this->session->getUsername())
         );
-        $this->assertSessionMessages($this->equalTo([(string)$expectedMessage]), MessageInterface::TYPE_ERROR);
-        $errorMessage = current($this->getMessages(MessageInterface::TYPE_ERROR));
-        $entities = ['&lt;', '&gt;', '&quot;', '&#039;', '&amp;'];
-        foreach ($entities as $entity) {
-            $this->assertNotContains($entity, $errorMessage);
-        }
-        $this->assertRedirect($this->stringContains('customer/account/login'));
+        $this->assertSessionMessages(
+            $this->equalTo([(string)$message]),
+            MessageInterface::TYPE_ERROR
+        );
     }
 
     /**

@@ -38,7 +38,7 @@ class HistoryTest extends TestCase
     /**
      * @inheritdoc
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         parent::setUp();
 
@@ -51,7 +51,7 @@ class HistoryTest extends TestCase
     /**
      * @inheritdoc
      */
-    protected function tearDown()
+    protected function tearDown(): void
     {
         $this->customerSession->logout();
 
@@ -66,7 +66,10 @@ class HistoryTest extends TestCase
     public function testCustomerOrderGridWithoutOrders(): void
     {
         $this->customerSession->loginById(1);
-        $this->assertContains((string)__('You have placed no orders.'), strip_tags($this->block->toHtml()));
+        $this->assertStringContainsString(
+            (string)$this->block->getEmptyOrdersMessage(),
+            strip_tags($this->block->toHtml())
+        );
     }
 
     /**
@@ -115,17 +118,6 @@ class HistoryTest extends TestCase
                     $blockHtml
                 ),
                 sprintf('Created date for order #%s wasn\'t found in row.', $orderIncrementId)
-            );
-            $this->assertEquals(
-                1,
-                Xpath::getElementsCountForXpath(
-                    sprintf(
-                        $rowXpath . "/following-sibling::td[contains(@class, 'shipping') and contains(text(), '%s')]",
-                        $order->getShippingAddress()->getName()
-                    ),
-                    $blockHtml
-                ),
-                sprintf('"Ship to" for order #%s wasn\'t found in row.', $orderIncrementId)
             );
             $this->assertEquals(
                 1,

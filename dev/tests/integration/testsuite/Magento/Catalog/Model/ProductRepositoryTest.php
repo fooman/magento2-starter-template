@@ -7,22 +7,15 @@ declare(strict_types=1);
 
 namespace Magento\Catalog\Model;
 
+use Magento\Backend\Model\Auth;
 use Magento\Catalog\Api\ProductRepositoryInterface;
-use Magento\Catalog\Model\Product\Media\ConfigInterface;
 use Magento\Catalog\Model\ResourceModel\Product as ProductResource;
 use Magento\Framework\Api\SearchCriteriaBuilder;
-use Magento\Framework\App\Filesystem\DirectoryList;
-use Magento\Framework\Exception\CouldNotSaveException;
-use Magento\Framework\Exception\InputException;
 use Magento\Framework\Exception\LocalizedException;
-use Magento\Framework\Exception\NoSuchEntityException;
-use Magento\Framework\Exception\StateException;
-use Magento\Framework\Filesystem;
-use Magento\Framework\Filesystem\Directory\WriteInterface;
-use Magento\Framework\ObjectManagerInterface;
 use Magento\TestFramework\Catalog\Model\ProductLayoutUpdateManager;
 use Magento\TestFramework\Helper\Bootstrap;
-use PHPUnit\Framework\TestCase;
+use Magento\TestFramework\Bootstrap as TestBootstrap;
+use Magento\Framework\Acl\Builder;
 
 /**
  * Provide tests for ProductRepository model.
@@ -31,13 +24,8 @@ use PHPUnit\Framework\TestCase;
  * @magentoAppIsolation enabled
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  */
-class ProductRepositoryTest extends TestCase
+class ProductRepositoryTest extends \PHPUnit\Framework\TestCase
 {
-    /**
-     * @var ObjectManagerInterface
-     */
-    private $objectManager;
-
     /**
      * Test subject.
      *
@@ -66,68 +54,46 @@ class ProductRepositoryTest extends TestCase
     private $layoutManager;
 
     /**
-     * @var ConfigInterface
+     * Sets up common objects
      */
-    private $mediaConfig;
-
-    /**
-     * @var WriteInterface
-     */
-    private $mediaDirectory;
-
-    /**
-     * @var array
-     */
-    private $productSkusToDelete = [];
-
-    /**
-     * @inheritdoc
-     */
-    protected function setUp()
+    protected function setUp(): void
     {
-        parent::setUp();
-
-        $this->objectManager = Bootstrap::getObjectManager();
-        $this->productRepository = $this->objectManager->get(ProductRepositoryInterface::class);
-        $this->productRepository->cleanCache();
-        $this->searchCriteriaBuilder = $this->objectManager->get(SearchCriteriaBuilder::class);
-        $this->productFactory = $this->objectManager->get(ProductFactory::class);
-        $this->productResource = $this->objectManager->get(ProductResource::class);
-        $this->layoutManager = $this->objectManager->get(ProductLayoutUpdateManager::class);
-        $this->mediaConfig = $this->objectManager->get(ConfigInterface::class);
-        $this->mediaDirectory = $this->objectManager->get(Filesystem::class)
-            ->getDirectoryWrite(DirectoryList::MEDIA);
+        Bootstrap::getObjectManager()->configure([
+            'preferences' => [
+                \Magento\Catalog\Model\Product\Attribute\LayoutUpdateManager::class =>
+                    \Magento\TestFramework\Catalog\Model\ProductLayoutUpdateManager::class
+            ]
+        ]);
+        $this->productRepository = Bootstrap::getObjectManager()->create(ProductRepositoryInterface::class);
+        $this->searchCriteriaBuilder = Bootstrap::getObjectManager()->get(SearchCriteriaBuilder::class);
+        $this->productFactory = Bootstrap::getObjectManager()->get(ProductFactory::class);
+        $this->productResource = Bootstrap::getObjectManager()->get(ProductResource::class);
+        $this->layoutManager = Bootstrap::getObjectManager()->get(ProductLayoutUpdateManager::class);
     }
 
     /**
-     * @inheritdoc
+     * Create new subject instance.
+     *
+     * @return ProductRepositoryInterface
      */
-    protected function tearDown()
+    private function createRepo(): ProductRepositoryInterface
     {
-        foreach ($this->productSkusToDelete as $productSku) {
-            try {
-                $this->productRepository->deleteById($productSku);
-            } catch (NoSuchEntityException $e) {
-                //Product already removed
-            }
-        }
-
-        parent::tearDown();
+        return Bootstrap::getObjectManager()->create(ProductRepositoryInterface::class);
     }
 
     /**
      * Checks filtering by store_id
      *
      * @magentoDataFixture Magento/Catalog/Model/ResourceModel/_files/product_simple.php
-     * @return void
      */
-    public function testFilterByStoreId(): void
+    public function testFilterByStoreId()
     {
         $searchCriteria = $this->searchCriteriaBuilder
             ->addFilter('store_id', '1', 'eq')
             ->create();
         $list = $this->productRepository->getList($searchCriteria);
         $count = $list->getTotalCount();
+
         $this->assertGreaterThanOrEqual(1, $count);
     }
 
@@ -139,11 +105,13 @@ class ProductRepositoryTest extends TestCase
      * @magentoDataFixture Magento/Catalog/_files/product_simple.php
      * @dataProvider skuDataProvider
      */
-    public function testGetProduct(string $sku): void
+    public function testGetProduct(string $sku) : void
     {
         $expectedSku = 'simple';
         $product = $this->productRepository->get($sku);
-        $this->assertEquals($expectedSku, $product->getSku());
+
+        self::assertNotEmpty($product);
+        self::assertEquals($expectedSku, $product->getSku());
     }
 
     /**
@@ -165,29 +133,45 @@ class ProductRepositoryTest extends TestCase
      *
      * @magentoDataFixture Magento/Catalog/_files/product_simple_with_image.php
      *
-     * @return void
-     * @throws CouldNotSaveException
-     * @throws InputException
-     * @throws StateException
+     * @throws \Magento\Framework\Exception\CouldNotSaveException
+     * @throws \Magento\Framework\Exception\InputException
+     * @throws \Magento\Framework\Exception\StateException
      */
     public function testSaveProductWithGalleryImage(): void
     {
-        $product = $this->productRepository->get('simple');
-        $path = $this->mediaConfig->getBaseMediaPath() . '/magento_image.jpg';
-        $absolutePath = $this->mediaDirectory->getAbsolutePath() . $path;
+        /** @var $mediaConfig \Magento\Catalog\Model\Product\Media\Config */
+        $mediaConfig = Bootstrap::getObjectManager()
+            ->get(\Magento\Catalog\Model\Product\Media\Config::class);
+
+        /** @var $mediaDirectory \Magento\Framework\Filesystem\Directory\WriteInterface */
+        $mediaDirectory = Bootstrap::getObjectManager()
+            ->get(\Magento\Framework\Filesystem::class)
+            ->getDirectoryWrite(\Magento\Framework\App\Filesystem\DirectoryList::MEDIA);
+
+        $product = Bootstrap::getObjectManager()->create(\Magento\Catalog\Model\Product::class);
+        $product->load(1);
+
+        $path = $mediaConfig->getBaseMediaPath() . '/magento_image.jpg';
+        $absolutePath = $mediaDirectory->getAbsolutePath() . $path;
         $product->addImageToMediaGallery(
             $absolutePath,
             [
-                'image',
-                'small_image',
+            'image',
+            'small_image',
             ],
             false,
             false
         );
-        $this->productRepository->save($product);
+
+        /** @var \Magento\Catalog\Api\ProductRepositoryInterface $productRepository */
+        $productRepository = Bootstrap::getObjectManager()
+            ->create(\Magento\Catalog\Api\ProductRepositoryInterface::class);
+        $productRepository->save($product);
+
         $gallery = $product->getData('media_gallery');
         $this->assertArrayHasKey('images', $gallery);
         $images = array_values($gallery['images']);
+
         $this->assertNotEmpty($gallery);
         $this->assertTrue(isset($images[0]['file']));
         $this->assertStringStartsWith('/m/a/magento_image', $images[0]['file']);
@@ -201,70 +185,58 @@ class ProductRepositoryTest extends TestCase
      * Test Product Repository can change(update) "sku" for given product.
      *
      * @magentoDataFixture Magento/Catalog/_files/product_simple.php
+     * @magentoDbIsolation enabled
      * @magentoAppArea adminhtml
-     * @return void
      */
-    public function testUpdateProductSku(): void
+    public function testUpdateProductSku()
     {
         $newSku = 'simple-edited';
         $productId = $this->productResource->getIdBySku('simple');
         $initialProduct = $this->productFactory->create();
         $this->productResource->load($initialProduct, $productId);
+
         $initialProduct->setSku($newSku);
         $this->productRepository->save($initialProduct);
-        $this->productSkusToDelete[] = $newSku;
+
         $updatedProduct = $this->productFactory->create();
         $this->productResource->load($updatedProduct, $productId);
-        $this->assertSame($newSku, $updatedProduct->getSku());
+        self::assertSame($newSku, $updatedProduct->getSku());
+
+        //clean up.
+        $this->productRepository->delete($updatedProduct);
     }
 
     /**
      * Test that custom layout file attribute is saved.
      *
-     * @magentoDataFixture Magento/Catalog/_files/product_simple.php
      * @return void
      * @throws \Throwable
+     * @magentoDataFixture Magento/Catalog/_files/product_simple.php
+     * @magentoDbIsolation enabled
+     * @magentoAppIsolation enabled
      */
     public function testCustomLayout(): void
     {
-        $product = $this->productRepository->get('simple');
+        //New valid value
+        $repo = $this->createRepo();
+        $product = $repo->get('simple');
         $newFile = 'test';
         $this->layoutManager->setFakeFiles((int)$product->getId(), [$newFile]);
         $product->setCustomAttribute('custom_layout_update_file', $newFile);
-        $this->productRepository->save($product);
-        $product = $this->productRepository->get('simple');
+        $repo->save($product);
+        $repo = $this->createRepo();
+        $product = $repo->get('simple');
         $this->assertEquals($newFile, $product->getCustomAttribute('custom_layout_update_file')->getValue());
+
+        //Setting non-existent value
         $newFile = 'does not exist';
         $product->setCustomAttribute('custom_layout_update_file', $newFile);
-        $this->expectException(LocalizedException::class);
-        $this->productRepository->save($product);
-    }
-
-    /**
-     * @magentoDataFixture Magento/Catalog/_files/product_simple_duplicated.php
-     * @magentoAppArea adminhtml
-     *
-     * @return void
-     */
-    public function testDeleteByIdSimpleProduct(): void
-    {
-        $productSku = 'simple-1';
-        $result = $this->productRepository->deleteById($productSku);
-        $this->assertTrue($result);
-        $this->assertProductNotExist($productSku);
-    }
-
-    /**
-     * Assert that product does not exist.
-     *
-     * @param string $sku
-     * @return void
-     */
-    private function assertProductNotExist(string $sku): void
-    {
-        $this->expectExceptionObject(new NoSuchEntityException(
-            __("The product that was requested doesn't exist. Verify the product and try again.")
-        ));
-        $this->productRepository->get($sku);
+        $caughtException = false;
+        try {
+            $repo->save($product);
+        } catch (LocalizedException $exception) {
+            $caughtException = true;
+        }
+        $this->assertTrue($caughtException);
     }
 }

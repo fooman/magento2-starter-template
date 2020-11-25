@@ -4,8 +4,6 @@
  * See COPYING.txt for license details.
  */
 
-declare(strict_types=1);
-
 namespace Magento\TestFramework\Annotation;
 
 use Magento\Framework\DB\Adapter\SqlVersionProvider;
@@ -27,6 +25,7 @@ class DataProviderFromFile
      * @var array
      */
     const POSSIBLE_SUFFIXES = [
+        SqlVersionProvider::MYSQL_8_0_VERSION => 'mysql8',
         SqlVersionProvider::MARIA_DB_10_VERSION => 'mariadb10',
     ];
 
@@ -84,7 +83,7 @@ class DataProviderFromFile
     /**
      * Load different db version files for different databases.
      *
-     * @param string $path The path of the initial file.
+     * @param string $path The path of the inital file.
      *
      * @return array
      */
@@ -94,11 +93,13 @@ class DataProviderFromFile
         $pathWithoutExtension = $this->removeFileExtension($path);
 
         foreach (glob($pathWithoutExtension . '.*') as $file) {
-            preg_match('/\.([\D]*[\d]*(?:\.[\d]+){0,2})/', $file, $splitParts);
+            /* Search database string in file name like mysql8 with
+               possibility to use version until patch level. */
+            preg_match('/\.([\D]*[\d]*(?:\.[\d]+){0,2})/', $file, $splitedParts);
             $dbKey = self::FALLBACK_VALUE;
 
-            if (count($splitParts) > 1) {
-                $database = array_pop($splitParts);
+            if (count($splitedParts) > 1) {
+                $database = array_pop($splitedParts);
 
                 if ($this->isValidDatabaseSuffix($database)) {
                     $dbKey = $database;

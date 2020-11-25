@@ -3,32 +3,30 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
-declare(strict_types=1);
+use Magento\TestFramework\Workaround\Override\Fixture\Resolver;
 
-use Magento\Catalog\Api\ProductRepositoryInterface;
-use Magento\Framework\Exception\NoSuchEntityException;
-use Magento\Framework\Registry;
-use Magento\TestFramework\Helper\Bootstrap;
+Resolver::getInstance()->requireDataFixture('Magento/Store/_files/second_website_with_two_stores_rollback.php');
 
-$objectManager = Bootstrap::getObjectManager();
-/** @var ProductRepositoryInterface $productRepository */
-$productRepository = $objectManager->get(ProductRepositoryInterface::class);
-$productRepository->cleanCache();
-/** @var Registry $registry */
-$registry = $objectManager->get(Registry::class);
+$objectManager = \Magento\TestFramework\Helper\Bootstrap::getObjectManager();
+$productRepository = $objectManager->create(\Magento\Catalog\Api\ProductRepositoryInterface::class);
+
+/** @var \Magento\Framework\Registry $registry */
+$registry = $objectManager->get(\Magento\Framework\Registry::class);
 
 $registry->unregister('isSecureArea');
 $registry->register('isSecureArea', true);
 
+/** @var \Magento\Catalog\Api\ProductRepositoryInterface $productRepository */
+$productRepository = $objectManager->create(\Magento\Catalog\Api\ProductRepositoryInterface::class);
+
 try {
     foreach (['simple-2', 'simple-1'] as $sku) {
-        $productRepository->deleteById($sku);
+        $product = $productRepository->get($sku, false, null, true);
+        $productRepository->delete($product);
     }
-} catch (NoSuchEntityException $exception) {
+} catch (\Magento\Framework\Exception\NoSuchEntityException $exception) {
     //Product already removed
 }
 
 $registry->unregister('isSecureArea');
 $registry->register('isSecureArea', false);
-
-require __DIR__ . '/../../Store/_files/second_website_with_two_stores_rollback.php';

@@ -14,11 +14,12 @@ use Magento\ConfigurableProduct\Helper\Product\Options\Factory;
 use Magento\ConfigurableProduct\Model\Product\Type\Configurable;
 use Magento\Eav\Api\Data\AttributeOptionInterface;
 use Magento\TestFramework\Helper\Bootstrap;
+use Magento\TestFramework\Workaround\Override\Fixture\Resolver;
+use Magento\Eav\Model\Config;
 
 \Magento\TestFramework\Helper\Bootstrap::getInstance()->reinitialize();
 
-require __DIR__ . '/configurable_attribute.php';
-
+Resolver::getInstance()->requireDataFixture('Magento/ConfigurableProduct/_files/configurable_attribute.php');
 /** @var ProductRepositoryInterface $productRepository */
 $productRepository = Bootstrap::getObjectManager()
     ->create(ProductRepositoryInterface::class);
@@ -26,6 +27,8 @@ $productRepository = Bootstrap::getObjectManager()
 /** @var $installer CategorySetup */
 $installer = Bootstrap::getObjectManager()->create(CategorySetup::class);
 
+$eavConfig = Bootstrap::getObjectManager()->get(Config::class);
+$attribute = $eavConfig->getAttribute(Product::ENTITY, 'test_configurable');
 /* Create simple products per each option value*/
 /** @var AttributeOptionInterface[] $options */
 $options = $attribute->getOptions();
@@ -74,8 +77,6 @@ foreach ($options as $option) {
     ];
     $associatedProductIds[] = $product->getId();
 }
-$indexerProcessor = Bootstrap::getObjectManager()->get(\Magento\Catalog\Model\Indexer\Product\Price\Processor::class);
-$indexerProcessor->reindexList($associatedProductIds);
 
 /** @var $product Product */
 $product = Bootstrap::getObjectManager()->create(Product::class);
@@ -130,8 +131,8 @@ $product->setTypeId(Configurable::TYPE_CODE)
     ->setVisibility(Visibility::VISIBILITY_BOTH)
     ->setStatus(Status::STATUS_ENABLED)
     ->setStockData(['use_config_manage_stock' => 1, 'is_in_stock' => 1]);
-$product = $productRepository->save($product);
-$indexerProcessor->reindexRow($product->getId());
+
+$productRepository->save($product);
 
 /** @var \Magento\Catalog\Api\CategoryLinkManagementInterface $categoryLinkManagement */
 $categoryLinkManagement = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()

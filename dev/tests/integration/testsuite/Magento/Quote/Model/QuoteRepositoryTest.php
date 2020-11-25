@@ -3,38 +3,26 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
-declare(strict_types=1);
-
 namespace Magento\Quote\Model;
 
-use Magento\Framework\Api\FilterBuilder;
-use Magento\Framework\Api\SearchCriteria;
-use Magento\Framework\Api\SearchCriteriaBuilder;
-use Magento\Framework\Api\SearchResults;
-use Magento\Framework\ObjectManagerInterface;
-use Magento\Quote\Api\CartRepositoryInterface;
-use Magento\Quote\Api\Data\AddressInterfaceFactory;
-use Magento\Quote\Api\Data\CartExtension;
-use Magento\Quote\Api\Data\CartInterface;
-use Magento\Quote\Api\Data\CartInterfaceFactory;
-use Magento\Quote\Api\Data\CartItemInterfaceFactory;
-use Magento\Quote\Api\Data\CartSearchResultsInterface;
-use Magento\Quote\Api\Data\ShippingAssignmentInterface;
-use Magento\Quote\Api\Data\ShippingInterface;
-use Magento\Quote\Model\Quote\Address as QuoteAddress;
-use Magento\Store\Api\StoreRepositoryInterface;
+use Magento\Store\Model\StoreRepository;
 use Magento\TestFramework\Helper\Bootstrap as BootstrapHelper;
-use Magento\TestFramework\Quote\Model\GetQuoteByReservedOrderId;
-use PHPUnit\Framework\TestCase;
+use Magento\Framework\ObjectManagerInterface;
+use Magento\Framework\Api\SearchCriteriaBuilder;
+use Magento\Framework\Api\SearchCriteria;
+use Magento\Framework\Api\SearchResults;
+use Magento\Framework\Api\FilterBuilder;
+use Magento\Quote\Api\Data\CartInterface;
+use Magento\Quote\Api\Data\CartSearchResultsInterface;
+use Magento\Quote\Api\Data\CartExtension;
+use Magento\User\Api\Data\UserInterface;
+use Magento\Quote\Model\Quote\Address as QuoteAddress;
 
 /**
- * Test for quote repository
- *
- * @see \Magento\Quote\Model\QuoteRepository
- * @magentoDbIsolation enabled
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
+ * @magentoDbIsolation disabled
  */
-class QuoteRepositoryTest extends TestCase
+class QuoteRepositoryTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var ObjectManagerInterface
@@ -42,7 +30,7 @@ class QuoteRepositoryTest extends TestCase
     private $objectManager;
 
     /**
-     * @var CartRepositoryInterface
+     * @var QuoteRepository
      */
     private $quoteRepository;
 
@@ -57,63 +45,14 @@ class QuoteRepositoryTest extends TestCase
     private $filterBuilder;
 
     /**
-     * @var GetQuoteByReservedOrderId
+     * Set up
      */
-    private $getQuoteByReservedOrderId;
-
-    /**
-     * @var StoreRepositoryInterface
-     */
-    private $storeRepository;
-
-    /**
-     * @var AddressInterfaceFactory
-     */
-    private $addressFactory;
-
-    /**
-     * @var CartInterfaceFactory
-     */
-    private $quoteFactory;
-
-    /**
-     * @var CartItemInterfaceFactory
-     */
-    private $itemFactory;
-
-    /**
-     * @var CartInterface|null
-     */
-    private $quote;
-
-    /**
-     * @inheritdoc
-     */
-    protected function setUp()
+    protected function setUp(): void
     {
-        parent::setUp();
-
         $this->objectManager = BootstrapHelper::getObjectManager();
-        $this->quoteRepository = $this->objectManager->create(CartRepositoryInterface::class);
-        $this->searchCriteriaBuilder = $this->objectManager->get(SearchCriteriaBuilder::class);
-        $this->filterBuilder = $this->objectManager->get(FilterBuilder::class);
-        $this->getQuoteByReservedOrderId = $this->objectManager->get(GetQuoteByReservedOrderId::class);
-        $this->storeRepository = $this->objectManager->get(StoreRepositoryInterface::class);
-        $this->addressFactory = $this->objectManager->get(AddressInterfaceFactory::class);
-        $this->quoteFactory = $this->objectManager->get(CartInterfaceFactory::class);
-        $this->itemFactory = $this->objectManager->get(CartItemInterfaceFactory::class);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    protected function tearDown()
-    {
-        if ($this->quote instanceof CartInterface) {
-            $this->quoteRepository->delete($this->quote);
-        }
-
-        parent::tearDown();
+        $this->quoteRepository = $this->objectManager->create(QuoteRepository::class);
+        $this->searchCriteriaBuilder = $this->objectManager->create(SearchCriteriaBuilder::class);
+        $this->filterBuilder = $this->objectManager->create(FilterBuilder::class);
     }
 
     /**
@@ -121,18 +60,22 @@ class QuoteRepositoryTest extends TestCase
      *
      * @magentoDataFixture Magento/Sales/_files/quote.php
      * @magentoDataFixture Magento/Store/_files/second_store.php
-     *
-     * @return void
      */
-    public function testGetQuoteWithCustomStoreId(): void
+    public function testGetQuoteWithCustomStoreId()
     {
         $secondStoreCode = 'fixture_second_store';
         $reservedOrderId = 'test01';
-        $secondStore = $this->storeRepository->get($secondStoreCode);
-        $quote = $this->getQuoteByReservedOrderId->execute($reservedOrderId);
+
+        $storeRepository = $this->objectManager->create(StoreRepository::class);
+        $secondStore = $storeRepository->get($secondStoreCode);
+
+        // Set store_id in quote to second store_id
+        $quote = $this->getQuote($reservedOrderId);
         $quote->setStoreId($secondStore->getId());
         $this->quoteRepository->save($quote);
+
         $savedQuote = $this->quoteRepository->get($quote->getId());
+
         $this->assertEquals(
             $secondStore->getId(),
             $savedQuote->getStoreId(),
@@ -142,10 +85,8 @@ class QuoteRepositoryTest extends TestCase
 
     /**
      * @magentoDataFixture Magento/Sales/_files/quote.php
-     *
-     * @return void
      */
-    public function testGetList(): void
+    public function testGetList()
     {
         $searchCriteria = $this->getSearchCriteria('test01');
         $searchResult = $this->quoteRepository->getList($searchCriteria);
@@ -154,50 +95,62 @@ class QuoteRepositoryTest extends TestCase
 
     /**
      * @magentoDataFixture Magento/Sales/_files/quote.php
-     *
-     * @return void
      */
-    public function testGetListDoubleCall(): void
+    public function testGetListDoubleCall()
     {
         $searchCriteria1 = $this->getSearchCriteria('test01');
         $searchCriteria2 = $this->getSearchCriteria('test02');
         $searchResult = $this->quoteRepository->getList($searchCriteria1);
         $this->performAssertions($searchResult);
         $searchResult = $this->quoteRepository->getList($searchCriteria2);
+
         $this->assertEmpty($searchResult->getItems());
     }
 
     /**
      * @magentoAppIsolation enabled
-     *
-     * @return void
      */
-    public function testSaveWithNotExistingCustomerAddress(): void
+    public function testSaveWithNotExistingCustomerAddress()
     {
         $addressData = include __DIR__ . '/../../Sales/_files/address_data.php';
-        $billingAddress = $this->addressFactory->create(['data' => $addressData]);
-        $billingAddress->setAddressType(QuoteAddress::ADDRESS_TYPE_BILLING)->setCustomerAddressId('not_existing');
-        $shippingAddress = $this->addressFactory->create(['data' => $addressData]);
-        $shippingAddress->setAddressType(QuoteAddress::ADDRESS_TYPE_SHIPPING)->setCustomerAddressId('not_existing');
-        $shipping = $this->objectManager->get(ShippingInterface::class);
+
+        /** @var QuoteAddress $billingAddress */
+        $billingAddress = $this->objectManager->create(QuoteAddress::class, ['data' => $addressData]);
+        $billingAddress->setAddressType(QuoteAddress::ADDRESS_TYPE_BILLING)
+            ->setCustomerAddressId('not_existing');
+
+        /** @var QuoteAddress $shippingAddress */
+        $shippingAddress = $this->objectManager->create(QuoteAddress::class, ['data' => $addressData]);
+        $shippingAddress->setAddressType(QuoteAddress::ADDRESS_TYPE_SHIPPING)
+            ->setCustomerAddressId('not_existing');
+
+        /** @var Shipping $shipping */
+        $shipping = $this->objectManager->create(Shipping::class);
         $shipping->setAddress($shippingAddress);
-        $shippingAssignment = $this->objectManager->get(ShippingAssignmentInterface::class);
+
+        /** @var ShippingAssignment $shippingAssignment */
+        $shippingAssignment = $this->objectManager->create(ShippingAssignment::class);
         $shippingAssignment->setItems([]);
         $shippingAssignment->setShipping($shipping);
-        $extensionAttributes = $this->objectManager->get(CartExtension::class);
+
+        /** @var CartExtension $extensionAttributes */
+        $extensionAttributes = $this->objectManager->create(CartExtension::class);
         $extensionAttributes->setShippingAssignments([$shippingAssignment]);
-        $this->quote = $this->quoteFactory->create();
-        $this->quote->setStoreId(1)
+
+        /** @var Quote $quote */
+        $quote = $this->objectManager->create(Quote::class);
+        $quote->setStoreId(1)
             ->setIsActive(true)
-            ->setIsMultiShipping(0)
+            ->setIsMultiShipping(false)
             ->setBillingAddress($billingAddress)
             ->setShippingAddress($shippingAddress)
             ->setExtensionAttributes($extensionAttributes)
             ->save();
-        $this->quoteRepository->save($this->quote);
-        $this->assertNull($this->quote->getBillingAddress()->getCustomerAddressId());
+        $this->quoteRepository->save($quote);
+
+        $this->assertNull($quote->getBillingAddress()->getCustomerAddressId());
         $this->assertNull(
-            $this->quote->getExtensionAttributes()
+            $quote->getExtensionAttributes()
                 ->getShippingAssignments()[0]
                 ->getShipping()
                 ->getAddress()
@@ -206,37 +159,21 @@ class QuoteRepositoryTest extends TestCase
     }
 
     /**
-     * @magentoDataFixture Magento/Catalog/_files/multiple_products.php
+     * Returns quote by reserved order id.
      *
-     * @return void
+     * @param string $reservedOrderId
+     * @return CartInterface
      */
-    public function testSaveQuoteWithItems(): void
+    private function getQuote(string $reservedOrderId)
     {
-        $items = $this->prepareQuoteItems(['simple1', 'simple2']);
-        $this->quote = $this->quoteFactory->create();
-        $this->quote->setItems($items);
-        $this->quoteRepository->save($this->quote);
-        $this->assertCount(2, $this->quote->getItemsCollection());
-        $this->assertEquals(2, $this->quote->getItemsCount());
-        $this->assertEquals(2, $this->quote->getItemsQty());
-    }
+        $searchCriteria = $this->getSearchCriteria($reservedOrderId);
+        $searchResult = $this->quoteRepository->getList($searchCriteria);
+        $items = $searchResult->getItems();
 
-    /**
-     * Prepare quote items by products sku.
-     *
-     * @param array $productsSku
-     * @return array
-     */
-    private function prepareQuoteItems(array $productsSku): array
-    {
-        $items = [];
-        foreach ($productsSku as $sku) {
-            $item = $this->itemFactory->create();
-            $item->setSku($sku)->setQty(1);
-            $items[] = $item;
-        }
+        /** @var CartInterface $quote */
+        $quote = array_pop($items);
 
-        return $items;
+        return $quote;
     }
 
     /**
@@ -245,7 +182,7 @@ class QuoteRepositoryTest extends TestCase
      * @param string $filterValue
      * @return SearchCriteria
      */
-    private function getSearchCriteria(string $filterValue): SearchCriteria
+    private function getSearchCriteria($filterValue)
     {
         $filters = [];
         $filters[] = $this->filterBuilder->setField('reserved_order_id')
@@ -260,19 +197,24 @@ class QuoteRepositoryTest extends TestCase
     /**
      * Perform assertions
      *
-     * @param CartSearchResultsInterface $searchResult
-     * @return void
+     * @param SearchResults|CartSearchResultsInterface $searchResult
      */
-    private function performAssertions(CartSearchResultsInterface $searchResult): void
+    private function performAssertions($searchResult)
     {
         $expectedExtensionAttributes = [
             'firstname' => 'firstname',
             'lastname' => 'lastname',
-            'email' => 'admin@example.com',
+            'email' => 'admin@example.com'
         ];
+
         $items = $searchResult->getItems();
+
+        /** @var CartInterface $actualQuote */
         $actualQuote = array_pop($items);
+
+        /** @var UserInterface $testAttribute */
         $testAttribute = $actualQuote->getExtensionAttributes()->getQuoteTestAttribute();
+
         $this->assertInstanceOf(CartInterface::class, $actualQuote);
         $this->assertEquals('test01', $actualQuote->getReservedOrderId());
         $this->assertEquals($expectedExtensionAttributes['firstname'], $testAttribute->getFirstName());

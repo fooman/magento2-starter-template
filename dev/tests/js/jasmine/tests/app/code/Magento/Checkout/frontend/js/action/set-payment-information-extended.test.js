@@ -78,8 +78,7 @@ define([
 
             setPaymentInformation(messageContainer, paymentData, false);
             expect(mocks['Magento_Checkout/js/model/full-screen-loader'].startLoader).toHaveBeenCalled();
-            expect(mocks['mage/storage'].post)
-                .toHaveBeenCalledWith(serviceUrl, JSON.stringify(payload), true, 'application/json', {});
+            expect(mocks['mage/storage'].post).toHaveBeenCalledWith(serviceUrl, JSON.stringify(payload));
             expect(mocks['Magento_Checkout/js/model/full-screen-loader'].stopLoader).toHaveBeenCalled();
         });
     });

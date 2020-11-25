@@ -6,7 +6,6 @@
 namespace Magento\ConfigurableProduct\Model\ResourceModel\Product\Indexer\Price;
 
 use Magento\Catalog\Api\ProductRepositoryInterface;
-use Magento\Catalog\Model\Indexer\Product\Price\Processor as PriceIndexerProcessor;
 use Magento\Catalog\Model\Product\Attribute\Source\Status;
 use Magento\Catalog\Model\ResourceModel\Product\Collection;
 use Magento\Catalog\Model\ResourceModel\Product\CollectionFactory;
@@ -19,7 +18,7 @@ use PHPUnit\Framework\TestCase;
 use Magento\Catalog\Api\Data\ProductInterface;
 
 /**
- * Test reindex of configurable products
+ * Configurable test
  *
  * @SuppressWarnings(PHPMD.CouplingBetweenObjects)
  * @magentoAppArea adminhtml
@@ -65,7 +64,7 @@ class ConfigurableTest extends TestCase
      */
     public function testGetProductFinalPriceIfOneOfChildIsDisabled(): void
     {
-        $configurableProduct = $this->getConfigurableProductFromCollection(1);
+        $configurableProduct = $this->getConfigurableProductFromCollection();
         $this->assertEquals(10, $configurableProduct->getMinimalPrice());
 
         $childProduct = $this->productRepository->getById(10, false, null, true);
@@ -76,7 +75,7 @@ class ConfigurableTest extends TestCase
         $this->productRepository->save($childProduct);
         $this->storeManager->setCurrentStore($currentStoreId);
 
-        $configurableProduct = $this->getConfigurableProductFromCollection(1);
+        $configurableProduct = $this->getConfigurableProductFromCollection();
         $this->assertEquals(20, $configurableProduct->getMinimalPrice());
     }
 
@@ -94,7 +93,7 @@ class ConfigurableTest extends TestCase
      */
     public function testGetProductFinalPriceIfOneOfChildIsDisabledPerStore(): void
     {
-        $configurableProduct = $this->getConfigurableProductFromCollection(1);
+        $configurableProduct = $this->getConfigurableProductFromCollection();
         $this->assertEquals(10, $configurableProduct->getMinimalPrice());
 
         $childProduct = $this->productRepository->get('simple_10', false, null, true);
@@ -107,7 +106,7 @@ class ConfigurableTest extends TestCase
         $this->productRepository->save($childProduct);
         $this->storeManager->setCurrentStore($currentStoreId);
 
-        $configurableProduct = $this->getConfigurableProductFromCollection(1);
+        $configurableProduct = $this->getConfigurableProductFromCollection();
         $this->assertEquals(20, $configurableProduct->getMinimalPrice());
     }
 
@@ -123,7 +122,7 @@ class ConfigurableTest extends TestCase
      */
     public function testGetProductMinimalPriceIfOneOfChildIsOutOfStock(): void
     {
-        $configurableProduct = $this->getConfigurableProductFromCollection(1);
+        $configurableProduct = $this->getConfigurableProductFromCollection();
         $this->assertEquals(10, $configurableProduct->getMinimalPrice());
 
         $childProduct = $this->productRepository->getById(10, false, null, true);
@@ -131,30 +130,8 @@ class ConfigurableTest extends TestCase
         $stockItem->setIsInStock(Stock::STOCK_OUT_OF_STOCK);
         $this->stockRepository->save($stockItem);
 
-        $configurableProduct = $this->getConfigurableProductFromCollection(1);
+        $configurableProduct = $this->getConfigurableProductFromCollection();
         $this->assertEquals(20, $configurableProduct->getMinimalPrice());
-    }
-
-    /**
-     * @magentoDataFixture Magento/Catalog/_files/enable_price_index_schedule.php
-     * @magentoDataFixture Magento/ConfigurableProduct/_files/product_configurable_with_assigned_simples.php
-     * @magentoDbIsolation disabled
-     *
-     * @return void
-     */
-    public function testReindexWithCorrectPriority()
-    {
-        $configurableProduct = $this->productRepository->get('configurable');
-        $childProduct1 = $this->productRepository->get('simple_1');
-        $childProduct2 = $this->productRepository->get('simple_2');
-        $priceIndexerProcessor = Bootstrap::getObjectManager()->get(PriceIndexerProcessor::class);
-        $priceIndexerProcessor->reindexList(
-            [$configurableProduct->getId(), $childProduct1->getId(), $childProduct2->getId()],
-            true
-        );
-
-        $configurableProduct = $this->getConfigurableProductFromCollection($configurableProduct->getId());
-        $this->assertEquals($childProduct1->getPrice(), $configurableProduct->getMinimalPrice());
     }
 
     /**
@@ -162,17 +139,16 @@ class ConfigurableTest extends TestCase
      * Returns Configurable product that was created by Magento/ConfigurableProduct/_files/product_configurable.php
      * fixture
      *
-     * @param int $productId
      * @return ProductInterface
      */
-    private function getConfigurableProductFromCollection(int $productId): ProductInterface
+    private function getConfigurableProductFromCollection(): ProductInterface
     {
         /** @var Collection $collection */
         $collection = Bootstrap::getObjectManager()->get(CollectionFactory::class)
             ->create();
         /** @var ProductInterface $configurableProduct */
         $configurableProduct = $collection
-            ->addIdFilter([$productId])
+            ->addIdFilter([1])
             ->addMinimalPrice()
             ->load()
             ->getFirstItem();

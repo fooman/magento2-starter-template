@@ -30,7 +30,7 @@ class BulkStatusInterfaceTest extends WebapiAbstract
         string $bulkUuid,
         int $expectedOperationCount,
         int $status
-    ) {
+    ): void {
         $resourcePath = self::RESOURCE_PATH . $bulkUuid . '/operation-status/' . $status;
         $serviceInfo = [
             'rest' => [
@@ -53,7 +53,7 @@ class BulkStatusInterfaceTest extends WebapiAbstract
     /**
      * @return array
      */
-    public function getBulkOperationCountDataProvider()
+    public function getBulkOperationCountDataProvider(): array
     {
         return [
             'Completed operations' => [

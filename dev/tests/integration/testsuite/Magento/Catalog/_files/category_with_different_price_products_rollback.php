@@ -38,12 +38,9 @@ try {
         ->addAttributeToFilter(CategoryInterface::KEY_NAME, 'Category 999')
         ->setPageSize(1)
         ->getFirstItem();
-    if ($category->getId()) {
-        $categoryRepository->delete($category);
-    }
+    $categoryRepository->delete($category);
 } catch (NoSuchEntityException $e) {
     //Already deleted.
 }
-
 $registry->unregister('isSecureArea');
 $registry->register('isSecureArea', false);

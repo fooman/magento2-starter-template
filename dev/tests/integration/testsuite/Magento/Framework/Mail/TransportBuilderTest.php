@@ -9,8 +9,6 @@ namespace Magento\Framework\Mail;
 
 use Magento\Email\Model\BackendTemplate;
 use Magento\Email\Model\Template;
-use Magento\Framework\App\TemplateTypesInterface;
-use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Mail\Template\TransportBuilder;
 use Magento\Framework\ObjectManagerInterface;
 use Magento\TestFramework\Helper\Bootstrap;
@@ -36,7 +34,7 @@ class TransportBuilderTest extends TestCase
      */
     protected $template;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->di = Bootstrap::getObjectManager();
         $this->builder = $this->di->get(TransportBuilder::class);
@@ -49,26 +47,11 @@ class TransportBuilderTest extends TestCase
      *
      * @param string|array $email
      * @dataProvider emailDataProvider
-     * @throws LocalizedException
+     * @throws \Magento\Framework\Exception\LocalizedException
      */
     public function testAddToEmail($email)
     {
-        $template = $this->template->load('email_exception_fixture', 'template_code');
-        $templateId = $template->getId();
-
-        switch ($template->getType()) {
-            case TemplateTypesInterface::TYPE_TEXT:
-                $templateType = MimeInterface::TYPE_TEXT;
-                break;
-
-            case TemplateTypesInterface::TYPE_HTML:
-                $templateType = MimeInterface::TYPE_HTML;
-                break;
-
-            default:
-                $templateType = '';
-                $this->fail('Unsupported Mime Type');
-        }
+        $templateId = $this->template->load('email_exception_fixture', 'template_code')->getId();
 
         $this->builder->setTemplateModel(BackendTemplate::class);
 
@@ -79,11 +62,9 @@ class TransportBuilderTest extends TestCase
         $this->builder->addTo($email);
 
         /** @var EmailMessage $emailMessage */
-        $emailMessage = $this->builder->getTransport()->getMessage();
+        $emailMessage = $this->builder->getTransport();
 
-        $this->assertContains($templateType, $emailMessage->getHeaders()['Content-Type']);
-
-        $addresses = $emailMessage->getTo();
+        $addresses = $emailMessage->getMessage()->getTo();
 
         $emails = [];
         /** @var Address $toAddress */

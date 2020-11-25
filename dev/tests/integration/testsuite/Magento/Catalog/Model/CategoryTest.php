@@ -58,7 +58,7 @@ class CategoryTest extends TestCase
     /**
      * @inheritdoc
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->objectManager = Bootstrap::getObjectManager();
         /** @var $storeManager StoreManagerInterface */
@@ -213,9 +213,15 @@ class CategoryTest extends TestCase
 
     public function testGetDesignAttributes(): void
     {
-        $attributes = $this->_model->getDesignAttributes();
-        $this->assertContains('custom_design_from', array_keys($attributes));
-        $this->assertContains('custom_design_to', array_keys($attributes));
+        $attributeCodes = array_map(
+            function ($elem) {
+                return $elem->getAttributeCode();
+            },
+            $this->_model->getDesignAttributes()
+        );
+
+        $this->assertContains('custom_design_from', $attributeCodes);
+        $this->assertContains('custom_design_to', $attributeCodes);
     }
 
     public function testCheckId(): void
@@ -363,7 +369,7 @@ class CategoryTest extends TestCase
         $this->_model->setData($data);
         $this->categoryResource->save($this->_model);
         $parentCategory = $this->categoryRepository->get(333);
-        $this->assertContains($this->_model->getId(), $parentCategory->getChildren());
+        $this->assertStringContainsString((string)$this->_model->getId(), $parentCategory->getChildren());
     }
 
     /**
@@ -466,36 +472,5 @@ class CategoryTest extends TestCase
         $collection->addNameToResult()->load();
 
         return $collection->getItemByColumnValue('name', $categoryName);
-    }
-
-    /**
-     * @return void
-     */
-    public function testSaveCategoryWithWrongPath(): void
-    {
-        /** @var CategoryRepositoryInterface $categoryRepository */
-        $categoryRepository = $this->objectManager->get(CategoryRepositoryInterface::class);
-        $categoryFactory = $this->objectManager->get(\Magento\Catalog\Api\Data\CategoryInterfaceFactory::class);
-
-        /** @var \Magento\Catalog\Api\Data\CategoryInterface $category */
-        $category = $categoryFactory->create(
-            [
-                'data' => [
-                    'name' => 'Category With Wrong Path',
-                    'parent_id' => 2,
-                    'path' => 'wrong/path',
-                    'level' => 2,
-                    'available_sort_by' =>['position', 'name'],
-                    'default_sort_by' => 'name',
-                    'is_active' => true,
-                    'position' => 1,
-                ],
-            ]
-        );
-        $category->isObjectNew(true);
-        $category->save();
-
-        $createdCategory = $categoryRepository->get($category->getId());
-        $this->assertEquals('0/0/'. $createdCategory->getId(), $createdCategory->getPath());
     }
 }

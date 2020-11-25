@@ -4,8 +4,6 @@
  * See COPYING.txt for license details.
  */
 
-$productIds = [];
-
 /** @var $product \Magento\Catalog\Model\Product */
 $product = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->create(\Magento\Catalog\Model\Product::class);
 $product->setTypeId(
@@ -29,7 +27,6 @@ $product->setTypeId(
 )->setStockData(
     ['qty' => 100, 'is_in_stock' => 1, 'manage_stock' => 1]
 )->save();
-$productIds[] = $product->getId();
 
 $product = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->create(\Magento\Catalog\Model\Product::class);
 $product->setTypeId(
@@ -53,7 +50,6 @@ $product->setTypeId(
 )->setStockData(
     ['qty' => 100, 'is_in_stock' => 1, 'manage_stock' => 1]
 )->save();
-$productIds[] = $product->getId();
 
 /** @var \Magento\Catalog\Model\Category $category */
 $category = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()->create(\Magento\Catalog\Model\Category::class);
@@ -83,7 +79,3 @@ $category->setId(
 )->setPostedProducts(
     [333 => 10]
 )->save();
-
-$indexerProcessor = \Magento\TestFramework\Helper\Bootstrap::getObjectManager()
-    ->get(\Magento\Catalog\Model\Indexer\Product\Price\Processor::class);
-$indexerProcessor->reindexList($productIds);

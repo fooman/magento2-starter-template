@@ -7,7 +7,6 @@ declare(strict_types=1);
 
 namespace Magento\TestFramework\Wishlist\Model;
 
-use Magento\Wishlist\Model\ResourceModel\Item\Collection;
 use Magento\Wishlist\Model\Item;
 use Magento\Wishlist\Model\Wishlist;
 use Magento\Wishlist\Model\WishlistFactory;
