@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3d3e77bf87c726e8abbe85b601587193",
+    "content-hash": "01fd51b265630f53ada30579dd206926",
     "packages": [
         {
             "name": "amzn/amazon-pay-and-login-magento-2-module",
@@ -2000,6 +2000,39 @@
             ],
             "description": "Magento composer library helps to instantiate Composer application and run composer commands.",
             "time": "2020-01-07T22:16:08+00:00"
+        },
+        {
+            "name": "magento/composer-root-update-plugin",
+            "version": "1.0.0",
+            "dist": {
+                "type": "zip",
+                "url": "https://repo.magento.com/archives/magento/composer-root-update-plugin/magento-composer-root-update-plugin-1.0.0.0.zip",
+                "shasum": "df94356237e631516cdcaa18a6aaecea127e9623"
+            },
+            "require": {
+                "composer-plugin-api": "^1.0",
+                "composer/composer": "<=1.10.6"
+            },
+            "suggest": {
+                "magento/framework": "Enables the Magento Composer Root Update Plugin's functionality for the Web Setup Wizard"
+            },
+            "type": "composer-plugin",
+            "extra": {
+                "class": "Magento\\ComposerRootUpdatePlugin\\Plugin\\PluginDefinition"
+            },
+            "autoload": {
+                "psr-4": {
+                    "Magento\\ComposerRootUpdatePlugin\\": ""
+                },
+                "files": [
+                    "registration.php"
+                ]
+            },
+            "license": [
+                "OSL-3.0",
+                "AFL-3.0"
+            ],
+            "description": "Plugin to look ahead for Magento project root changes when running composer update for new Magento versions"
         },
         {
             "name": "magento/framework",
@@ -21076,5 +21109,9 @@
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": [],
-    "platform-dev": []
+    "platform-dev": [],
+    "platform-overrides": {
+        "php": "7.3"
+    },
+    "plugin-api-version": "1.1.0"
 }
